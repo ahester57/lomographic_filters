@@ -14,6 +14,10 @@
 #include "./include/histo_func.hpp"
 
 
+int slider_value = 0;
+cv::Mat original_image;
+cv::Mat blended_image;
+
 int
 wait_key()
 {
@@ -24,6 +28,16 @@ wait_key()
         return 0;
     }
     return 1;
+}
+
+static void
+on_trackbar1(int, void*)
+{
+    double alpha = (double) slider_value / 12;
+    double beta = 1.0 - alpha;
+    original_image = run_image_matching(original_image, blended_image);
+    cv::imshow("original", original_image);
+    blended_image = original_image;
 }
 
 int
@@ -46,14 +60,13 @@ main(int argc, const char** argv)
         std::cerr << "Could not open image :( " << input_image << std::endl;
         return -1;
     }
-
+    blended_image = open_image("bear.jpg", true)->image;
+    original_image = og_image->image;
     // display the original image
-    cv::imshow("original", og_image->image);
-    wait_key();
+    cv::imshow("original", original_image);
 
+    cv::createTrackbar("trackbar1", "original", &slider_value, 12, on_trackbar1);
 
-    // display the equalized image
-    cv::imshow("lomo", og_image->image);
     wait_key();
 
     return 0;
