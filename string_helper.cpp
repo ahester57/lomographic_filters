@@ -3,9 +3,10 @@
 // Austin Hester CS542o oct 2020
 // g++.exe (x86_64-posix-seh-rev0, Built by MinGW-W64 project) 8.1.0
 
+#include <sstream>
+
 #include "./include/string_helper.hpp"
 
-#include <sstream>
 
 std::vector<std::string>
 split (std::string s, char delim)
