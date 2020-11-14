@@ -16,7 +16,9 @@
 #define WINDOW_NAME "Lomography"
 
 const uint S_VALUES = 13;
+const uint INTENSITY_VALUES = 256;
 
+uchar* LUT[S_VALUES];
 int slider_red_value = 0;
 int slider_vig_value = 0;
 cv::Mat original_image;
@@ -58,18 +60,18 @@ create_LUT(uchar** LUT)
     // for each s value
     for (uint s = 0; s < S_VALUES; s++) {
         // each red value
-        for (uint r = 0; r < 256; r++) {
+        for (uint r = 0; r < INTENSITY_VALUES; r++) {
             LUT[s][r] =
-            256 /
-                (1 +
-                    pow(
-                        EEEE ,
-                        -1 * (
-                            (r / 256.0 - 0.5) /
-                                s_real[s]
+                INTENSITY_VALUES /
+                    (1 +
+                        pow(
+                            EEEE ,
+                            -1 * (
+                                (r / (float)INTENSITY_VALUES - 0.5) /
+                                    s_real[s]
+                            )
                         )
-                    )
-                );
+                    );
         }
     }
 }
@@ -100,9 +102,8 @@ main(int argc, const char** argv)
     cv::imshow(WINDOW_NAME, original_image);
 
     // initialize LUT
-    uchar* LUT[S_VALUES];
     for (uint s = 0; s < S_VALUES; s++) {
-        LUT[s] = new uchar[256];
+        LUT[s] = new uchar[INTENSITY_VALUES];
     }
     create_LUT(LUT);
 
