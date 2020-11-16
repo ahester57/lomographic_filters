@@ -38,10 +38,27 @@ wait_key()
 static void
 on_trackbar_red_level(int, void*)
 {
-    double alpha = (double) slider_red_value / S_VALUES;
-    double beta = 1.0 - alpha;
-    // original_image = run_image_matching(original_image, original_image);
-    cv::imshow(WINDOW_NAME, original_image*alpha);
+    cv::Mat rgb_values[3];
+    // split the original image into 3 rgb channels
+    cv::split(original_image, rgb_values);
+    std::vector<cv::Mat> channels = { rgb_values[0], rgb_values[1], rgb_values[2] };
+    // if zero, use original
+    if (slider_red_value == 0) {
+        cv::imshow(WINDOW_NAME, original_image);
+        return;
+    }
+    // adjust red value for each pixel
+    for (int r = 0; r < channels[1].rows; r++) {
+        for (int c = 0; c < channels[1].cols; c++) {
+            // apply LUT for each pixel
+            uint pixel = (uint) channels[1].at<uchar>(r, c);
+            channels[1].at<uchar>(r, c) = LUT[slider_red_value-1][pixel];
+        }
+    }
+    // merge channels back together
+    cv::Mat dst;
+    cv:merge(channels, dst);
+    cv::imshow(WINDOW_NAME, dst);
 }
 
 static void
@@ -69,7 +86,7 @@ create_LUT(uchar** LUT)
                             EEEE ,
                             -1 * (
                                 (r / (float)INTENSITY_VALUES - 0.5) /
-                                    s_real[s]
+                                    s_real[S_VALUES-s-1]
                             )
                         )
                     );
