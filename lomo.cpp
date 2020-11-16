@@ -22,6 +22,7 @@ uchar* LUT[S_VALUES];
 int slider_red_value = 0;
 int slider_vig_value = 0;
 cv::Mat original_image;
+cv::Mat displayed_image;
 
 int
 wait_key()
@@ -44,7 +45,8 @@ on_trackbar_red_level(int, void*)
     std::vector<cv::Mat> channels = { rgb_values[0], rgb_values[1], rgb_values[2] };
     // if zero, use original
     if (slider_red_value == 0) {
-        cv::imshow(WINDOW_NAME, original_image);
+        original_image.copyTo(displayed_image);
+        cv::imshow(WINDOW_NAME, displayed_image);
         return;
     }
     // adjust red value for each pixel
@@ -56,9 +58,8 @@ on_trackbar_red_level(int, void*)
         }
     }
     // merge channels back together
-    cv::Mat dst;
-    cv:merge(channels, dst);
-    cv::imshow(WINDOW_NAME, dst);
+    cv:merge(channels, displayed_image);
+    cv::imshow(WINDOW_NAME, displayed_image);
 }
 
 static void
@@ -128,7 +129,7 @@ main(int argc, const char** argv)
     cv::createTrackbar("Red Level", WINDOW_NAME, &slider_red_value, S_VALUES, on_trackbar_red_level);
     cv::createTrackbar("Vignette", WINDOW_NAME, &slider_vig_value, 100, on_trackbar_vignette);
 
-    wait_key();
+    while (wait_key());
 
     for (uint s = 0; s < S_VALUES; s++) {
         delete LUT[s];
