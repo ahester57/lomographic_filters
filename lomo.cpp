@@ -56,6 +56,7 @@ on_trackbar_vignette(int, void*)
 void
 create_LUT(uchar** LUT)
 {
+    // compute the LUT for each s value so we don't have to recompute every time the slider changes.
     float s_real[] = { 0.08, 0.09, 0.1, 0.11, 0.12, 0.13, 0.14, 0.15, 0.16, 0.17, 0.18, 0.19, 0.2 };
     // for each s value
     for (uint s = 0; s < S_VALUES; s++) {
