@@ -28,6 +28,14 @@ int
 wait_key()
 {
     char key_pressed = cv::waitKey(0) & 255;
+    // 's' saves the current image
+    if (key_pressed == 's') {
+        if (!displayed_image.empty()) {
+            write_img_to_file(displayed_image, "./out", "lomo_output.jpg");
+            cv::destroyAllWindows();
+            return 0;
+        }
+    }
     // 'q' or  <escape> quits out
     if (key_pressed == 27 || key_pressed == 'q') {
         cv::destroyAllWindows();
