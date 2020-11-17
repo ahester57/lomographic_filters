@@ -9,5 +9,6 @@
 #include <iostream>
 
 std::vector<std::string> split (std::string s, char delim);
+std::string cv_type_to_str(int type, uint8_t channels);
 
 #endif
