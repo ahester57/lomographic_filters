@@ -18,6 +18,9 @@
 #define EEEE  2.71828
 #define WINDOW_NAME "Lomography"
 
+// CLA variable
+std::string input_image;
+
 const uint S_VALUES = 13;
 const uint INTENSITY_VALUES = 256;
 
@@ -32,6 +35,8 @@ cv::Mat original_image;
 cv::Mat displayed_image;
 cv::Point center;
 
+
+// 'event loop' for keypresses
 int
 wait_key()
 {
@@ -43,7 +48,12 @@ wait_key()
     }
     if (key_pressed == 's') {
         if (!displayed_image.empty()) {
-            write_img_to_file(displayed_image, "./out", "lomo_output.jpg");
+            write_img_to_file(
+                displayed_image,
+                "./out",
+                "lomo_" + std::to_string(slider_red_value) +
+                    "_" + std::to_string(slider_vig_value) + input_image
+            );
             cv::destroyAllWindows();
             return 0;
         }
@@ -56,6 +66,7 @@ wait_key()
     return 1;
 }
 
+// trackbar for red level
 static void
 on_trackbar_red_level(int, void*)
 {
@@ -85,30 +96,36 @@ on_trackbar_red_level(int, void*)
     cv::imshow(WINDOW_NAME, displayed_image);
 }
 
+// trackbar for vignette filter
 static void
 on_trackbar_vignette(int, void*)
 {
     //     Compute the maximum radius of the halo as the minimum of number of rows and colums in the image. Use the
     // percentage from the trackbar to draw a circle of radius as r – percentage of maximum radius. Each pixel in this
     // circle is assigned as 1 (white).
-    uint radius = max_radius - (slider_vig_value / 100.0);
+    uint radius = max_radius - ((100 - slider_vig_value) / 100.0 * max_radius) + 1;
     cv::Mat halo = cv::Mat(original_image.size(), CV_32FC3);
 
+    // build the halo matrix
     for (int r = 0; r < halo.rows; r++) {
         for (int c = 0; c < halo.cols; c++) {
             halo.at<float>(r, c) = 0.75;
         }
     }
-    cv::circle(halo, center, radius, 1.0);
+
+    // draw circle
+    cv::circle(halo, center, radius, cv::Scalar(1.0), cv::FILLED);
     cv::Mat dst;
-    cv::blur(halo, dst, cv::Size(radius, radius));
+    cv::blur(displayed_image, dst, cv::Size(radius, radius));
     cv::circle(dst, center, radius, 1.0);
     // std::cout << cv_type_to_str(dst.depth(), dst.channels()) << std::endl;
+    dst.copyTo(displayed_image);
 
     // cv::cvtColor(dst, displayed_image, CV_32FC3);
-    cv::imshow(WINDOW_NAME, dst);
+    cv::imshow(WINDOW_NAME, displayed_image);
 }
 
+// ...
 void
 create_red_level_LUT(uchar** LUT)
 {
@@ -136,8 +153,6 @@ create_red_level_LUT(uchar** LUT)
 int
 main(int argc, const char** argv)
 {
-    // CLA variables
-    std::string input_image;
 
     // parse and save command line args
     int parse_result = parse_arguments(
@@ -158,28 +173,29 @@ main(int argc, const char** argv)
     original_image.copyTo(displayed_image);
 
     // display the original image
-    cv::imshow(WINDOW_NAME, original_image);
+    cv::imshow(WINDOW_NAME, displayed_image);
 
-    // initialize LUT
+    // initialize red level LUT
     for (uint s = 0; s < S_VALUES; s++) {
         LUT[s] = new uchar[INTENSITY_VALUES];
     }
     create_red_level_LUT(LUT);
 
-    // compute max radius for halo
+    // define max radius and center for halo
     max_radius = original_image.rows < original_image.cols ? original_image.rows : original_image.cols;
     center = cv::Point(original_image.cols * 2, original_image.rows * 2);
 
     cv::createTrackbar("Red Level", WINDOW_NAME, &slider_red_value, S_VALUES, on_trackbar_red_level);
     cv::createTrackbar("Vignette", WINDOW_NAME, &slider_vig_value, 100, on_trackbar_vignette);
 
+    // 'event loop' for keypresses
     while (wait_key());
 
     original_image.release();
     displayed_image.release();
-
     for (uint s = 0; s < S_VALUES; s++) {
         delete LUT[s];
     }
+
     return 0;
 }
