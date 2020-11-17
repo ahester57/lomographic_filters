@@ -15,6 +15,9 @@
 #include "./include/string_helper.hpp"
 
 
+static void on_trackbar_vignette(int, void*);
+
+
 #define EEEE  2.71828
 #define WINDOW_NAME "Lomography"
 
@@ -32,6 +35,7 @@ int slider_vig_value = 0;
 uint max_radius;
 
 cv::Mat original_image;
+cv::Mat red_level_image;
 cv::Mat displayed_image;
 cv::Point center;
 
@@ -72,8 +76,9 @@ on_trackbar_red_level(int, void*)
 {
     // if zero, use original
     if (slider_red_value == 0) {
-        original_image.copyTo(displayed_image);
-        cv::imshow(WINDOW_NAME, displayed_image);
+        original_image.copyTo(red_level_image);
+        red_level_image.copyTo(displayed_image);
+        on_trackbar_vignette(slider_vig_value, &slider_vig_value);
         return;
     }
 
@@ -83,23 +88,30 @@ on_trackbar_red_level(int, void*)
     std::vector<cv::Mat> channels = { rgb_values[0], rgb_values[1], rgb_values[2] };
 
     // adjust red value for each pixel
-    for (int r = 0; r < channels[1].rows; r++) {
-        for (int c = 0; c < channels[1].cols; c++) {
+    for (int r = 0; r < channels[2].rows; r++) {
+        for (int c = 0; c < channels[2].cols; c++) {
             // apply LUT for each pixel
-            channels[1].at<uchar>(r, c) =
-                LUT[slider_red_value-1][(uint) channels[1].at<uchar>(r, c)];
+            channels[2].at<uchar>(r, c) =
+                LUT[slider_red_value-1][(uint) channels[2].at<uchar>(r, c)];
         }
     }
 
     // merge channels back together
-    cv:merge(channels, displayed_image);
-    cv::imshow(WINDOW_NAME, displayed_image);
+    cv:merge(channels, red_level_image);
+    red_level_image.copyTo(displayed_image);
+    on_trackbar_vignette(slider_vig_value, &slider_vig_value);
 }
 
 // trackbar for vignette filter
 static void
 on_trackbar_vignette(int, void*)
 {
+    // if zero, use original
+    if (slider_vig_value == 0) {
+        red_level_image.copyTo(displayed_image);
+        cv::imshow(WINDOW_NAME, displayed_image);
+        return;
+    }
     //     Compute the maximum radius of the halo as the minimum of number of rows and colums in the image. Use the
     // percentage from the trackbar to draw a circle of radius as r – percentage of maximum radius. Each pixel in this
     // circle is assigned as 1 (white).
@@ -109,19 +121,39 @@ on_trackbar_vignette(int, void*)
     // build the halo matrix
     for (int r = 0; r < halo.rows; r++) {
         for (int c = 0; c < halo.cols; c++) {
-            halo.at<float>(r, c) = 0.75;
+            halo.at<cv::Vec3f>(r, c) = { 0.75, 0.75, 0.75 };
+        }
+    }
+    std::cout << radius;
+
+    // draw circle (cv::circle does NOT work like this...) no clue
+    cv::Mat halo_tmp;
+    cv::circle(halo, center, radius, cv::Scalar(1,1,1), cv::FILLED);
+    cv::blur(halo, halo_tmp, cv::Size(radius, radius));
+    std::cout << cv_type_to_str(halo.depth(), halo.channels()) << std::endl;
+    std::cout << halo.at<cv::Vec3f>(halo.cols/2, halo.rows/2) << std::endl;
+
+    cv::Mat dst;
+    red_level_image.convertTo(dst, CV_32FC3, 1/255.0);
+    cv::circle(dst, center, radius, cv::Scalar(255.0, 255.0, 255.0), cv::FILLED);
+
+    for (int r = 0; r < dst.rows; r++) {
+        for (int c = 0; c < dst.cols; c++) {
+            // get pixels from both
+            cv::Vec3f pixel_dst = dst.at<cv::Vec3f>(r, c);
+            cv::Vec3f pixel_halo = halo_tmp.at<cv::Vec3f>(r, c);
+
+            cv::Vec3f pixel_vig = { 0.0, 0.0, 0.0 };
+            pixel_vig[0] = pixel_dst[0] * pixel_halo[0];
+            pixel_vig[1] = pixel_dst[1] * pixel_halo[1];
+            pixel_vig[2] = pixel_dst[2] * pixel_halo[2];
+
+            dst.at<cv::Vec3f>(r, c) = pixel_vig;
         }
     }
 
-    // draw circle
-    cv::circle(halo, center, radius, cv::Scalar(1.0), cv::FILLED);
-    cv::Mat dst;
-    cv::blur(displayed_image, dst, cv::Size(radius, radius));
-    cv::circle(dst, center, radius, 1.0);
-    // std::cout << cv_type_to_str(dst.depth(), dst.channels()) << std::endl;
-    dst.copyTo(displayed_image);
+    dst.convertTo(displayed_image, CV_8UC3, 255.0);
 
-    // cv::cvtColor(dst, displayed_image, CV_32FC3);
     cv::imshow(WINDOW_NAME, displayed_image);
 }
 
@@ -171,6 +203,7 @@ main(int argc, const char** argv)
 
     original_image = og_image->image;
     original_image.copyTo(displayed_image);
+    original_image.copyTo(red_level_image);
 
     // display the original image
     cv::imshow(WINDOW_NAME, displayed_image);
@@ -192,6 +225,7 @@ main(int argc, const char** argv)
     while (wait_key());
 
     original_image.release();
+    red_level_image.release();
     displayed_image.release();
     for (uint s = 0; s < S_VALUES; s++) {
         delete LUT[s];
