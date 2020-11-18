@@ -128,7 +128,7 @@ on_trackbar_vignette(int, void*)
     // draw circle and blur
     cv::Mat halo_tmp;
     cv::circle(halo, center, radius, cv::Scalar(1,1,1), cv::FILLED);
-    uint blur_kernel_radius = radius / 2 > 0 ? radius / 2 : 1;  // compute kernel radius with personal preference
+    uint blur_kernel_radius = radius / 5 > 0 ? radius / 5 : 1;  // compute kernel radius with personal preference
     cv::blur(halo, halo_tmp, cv::Size(blur_kernel_radius, blur_kernel_radius));
 
     cv::Mat dst;
