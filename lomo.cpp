@@ -115,20 +115,21 @@ on_trackbar_vignette(int, void*)
     //     Compute the maximum radius of the halo as the minimum of number of rows and colums in the image. Use the
     // percentage from the trackbar to draw a circle of radius as r – percentage of maximum radius. Each pixel in this
     // circle is assigned as 1 (white).
-    uint radius = max_radius - (slider_vig_value / 100.0 * max_radius) + 1;
+    uint radius = max_radius - (slider_vig_value / 100.0 * max_radius);
     cv::Mat halo = cv::Mat(original_image.size(), CV_32FC3);
 
     // build the halo matrix
     for (int r = 0; r < halo.rows; r++) {
         for (int c = 0; c < halo.cols; c++) {
-            halo.at<cv::Vec3f>(r, c) = { 0.75, 0.75, 0.75 };
+            halo.at<cv::Vec3f>(r, c) = { 0.57, 0.57, 0.57 }; // 0.57 bc i want my vignette a little darker
         }
     }
 
     // draw circle and blur
     cv::Mat halo_tmp;
     cv::circle(halo, center, radius, cv::Scalar(1,1,1), cv::FILLED);
-    cv::blur(halo, halo_tmp, cv::Size(radius, radius));
+    uint blur_kernel_radius = radius / 2 > 0 ? radius / 2 : 1;  // compute kernel radius with personal preference
+    cv::blur(halo, halo_tmp, cv::Size(blur_kernel_radius, blur_kernel_radius));
 
     cv::Mat dst;
     red_level_image.convertTo(dst, CV_32FC3, 1/255.0);
@@ -211,8 +212,8 @@ main(int argc, const char** argv)
     }
     create_red_level_LUT(LUT);
 
-    // define max radius and center for halo
-    max_radius = original_image.rows < original_image.cols ? original_image.rows : original_image.cols;
+    // define max radius and center for halo (choose the bigger one bc i prefer it that way)
+    max_radius = original_image.rows < original_image.cols ? original_image.cols / 2 : original_image.rows / 2;
     center = cv::Point(original_image.cols / 2, original_image.rows / 2);
 
     cv::createTrackbar("Red Level", WINDOW_NAME, &slider_red_value, S_VALUES, on_trackbar_red_level);
