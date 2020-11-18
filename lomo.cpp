@@ -115,7 +115,7 @@ on_trackbar_vignette(int, void*)
     //     Compute the maximum radius of the halo as the minimum of number of rows and colums in the image. Use the
     // percentage from the trackbar to draw a circle of radius as r – percentage of maximum radius. Each pixel in this
     // circle is assigned as 1 (white).
-    uint radius = max_radius - ((100 - slider_vig_value) / 100.0 * max_radius) + 1;
+    uint radius = max_radius - (slider_vig_value / 100.0 * max_radius) + 1;
     cv::Mat halo = cv::Mat(original_image.size(), CV_32FC3);
 
     // build the halo matrix
@@ -124,18 +124,14 @@ on_trackbar_vignette(int, void*)
             halo.at<cv::Vec3f>(r, c) = { 0.75, 0.75, 0.75 };
         }
     }
-    std::cout << radius;
 
-    // draw circle (cv::circle does NOT work like this...) no clue
+    // draw circle and blur
     cv::Mat halo_tmp;
     cv::circle(halo, center, radius, cv::Scalar(1,1,1), cv::FILLED);
     cv::blur(halo, halo_tmp, cv::Size(radius, radius));
-    std::cout << cv_type_to_str(halo.depth(), halo.channels()) << std::endl;
-    std::cout << halo.at<cv::Vec3f>(halo.cols/2, halo.rows/2) << std::endl;
 
     cv::Mat dst;
     red_level_image.convertTo(dst, CV_32FC3, 1/255.0);
-    cv::circle(dst, center, radius, cv::Scalar(255.0, 255.0, 255.0), cv::FILLED);
 
     for (int r = 0; r < dst.rows; r++) {
         for (int c = 0; c < dst.cols; c++) {
@@ -144,6 +140,7 @@ on_trackbar_vignette(int, void*)
             cv::Vec3f pixel_halo = halo_tmp.at<cv::Vec3f>(r, c);
 
             cv::Vec3f pixel_vig = { 0.0, 0.0, 0.0 };
+            // multiply pixels
             pixel_vig[0] = pixel_dst[0] * pixel_halo[0];
             pixel_vig[1] = pixel_dst[1] * pixel_halo[1];
             pixel_vig[2] = pixel_dst[2] * pixel_halo[2];
@@ -152,8 +149,8 @@ on_trackbar_vignette(int, void*)
         }
     }
 
+    // convert back to CV_8UC3 and display
     dst.convertTo(displayed_image, CV_8UC3, 255.0);
-
     cv::imshow(WINDOW_NAME, displayed_image);
 }
 
@@ -216,7 +213,7 @@ main(int argc, const char** argv)
 
     // define max radius and center for halo
     max_radius = original_image.rows < original_image.cols ? original_image.rows : original_image.cols;
-    center = cv::Point(original_image.cols * 2, original_image.rows * 2);
+    center = cv::Point(original_image.cols / 2, original_image.rows / 2);
 
     cv::createTrackbar("Red Level", WINDOW_NAME, &slider_red_value, S_VALUES, on_trackbar_red_level);
     cv::createTrackbar("Vignette", WINDOW_NAME, &slider_vig_value, 100, on_trackbar_vignette);
